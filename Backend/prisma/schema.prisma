@@ -1,0 +1,85 @@
+// This is your Prisma schema file
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  password        String
+  name            String
+  preferences     Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  drafts          Draft[]
+  
+  @@map("users")
+}
+
+model Draft {
+  id                String               @id @default(uuid())
+  userId            String
+  title             String
+  content           String               @db.Text
+  optimizedContent  String?              @db.Text
+  status            String               @default("draft")
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  
+  user              User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions          OptimizationSession[]
+  translations      Translation[]
+  
+  @@map("drafts")
+  @@index([userId])
+}
+
+model OptimizationSession {
+  id                String    @id @default(uuid())
+  draftId           String
+  originalContent   String    @db.Text
+  optimizedContent  String    @db.Text
+  changes           Json
+  seoScore          Float?
+  readabilityScore  Float?
+  keywordDensity    Json?
+  targetTone        String?
+  createdAt         DateTime  @default(now())
+  
+  draft             Draft     @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  
+  @@map("optimization_sessions")
+  @@index([draftId])
+}
+
+model Translation {
+  id                String    @id @default(uuid())
+  draftId           String
+  language          String
+  translatedContent String    @db.Text
+  seoOptimized      Boolean   @default(false)
+  metaData          Json?
+  createdAt         DateTime  @default(now())
+  
+  draft             Draft     @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  
+  @@map("translations")
+  @@index([draftId, language])
+}
+
+model Keyword {
+  id            String    @id @default(uuid())
+  keyword       String    @unique
+  difficulty    Int?
+  volume        Int?
+  suggestedUse  String?
+  createdAt     DateTime  @default(now())
+  
+  @@map("keywords")
+}
